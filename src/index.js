@@ -18,11 +18,15 @@ connectDB();
 // Initialize express app
 const app = express();
 
-// Middleware
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true
-}));
+// Middleware - CORS CORREGIDO
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -39,7 +43,7 @@ app.use('/api/reports', reportRoutes);
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'Server is running'
+    message: 'Server is running',
   });
 });
 
@@ -48,7 +52,7 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(err.statusCode || 500).json({
     success: false,
-    message: err.message || 'Server Error'
+    message: err.message || 'Server Error',
   });
 });
 
@@ -56,7 +60,7 @@ app.use((err, req, res, next) => {
 app.use((req, res) => {
   res.status(404).json({
     success: false,
-    message: 'Route not found'
+    message: 'Route not found',
   });
 });
 
@@ -67,4 +71,3 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
-
