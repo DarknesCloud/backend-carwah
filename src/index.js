@@ -1,7 +1,6 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const cookieParser = require('cookie-parser');
 const connectDB = require('./config/database');
 
 // Import routes
@@ -18,20 +17,16 @@ connectDB();
 // Initialize express app
 const app = express();
 
-// Middleware - CORS CORREGIDO
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
+// Middleware - CORS simplificado (sin cookies)
+app.use(cors({
+  origin: '*', // Permite todos los orígenes
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
 
-// Routes
+// Routes (todas públicas, sin autenticación)
 app.use('/api/auth', authRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/vehicle-types', vehicleTypeRoutes);
@@ -43,7 +38,7 @@ app.use('/api/reports', reportRoutes);
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'Server is running',
+    message: 'Server is running - No authentication required'
   });
 });
 
@@ -52,7 +47,7 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(err.statusCode || 500).json({
     success: false,
-    message: err.message || 'Server Error',
+    message: err.message || 'Server Error'
   });
 });
 
@@ -60,7 +55,7 @@ app.use((err, req, res, next) => {
 app.use((req, res) => {
   res.status(404).json({
     success: false,
-    message: 'Route not found',
+    message: 'Route not found'
   });
 });
 
@@ -68,6 +63,8 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  console.log('⚠️  WARNING: Authentication disabled - All routes are public');
 });
 
 module.exports = app;
+

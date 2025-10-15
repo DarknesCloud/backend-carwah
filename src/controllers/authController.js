@@ -1,14 +1,6 @@
 const User = require('../models/User');
-const jwt = require('jsonwebtoken');
 
-// Generate JWT Token
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '30d',
-  });
-};
-
-// @desc    Login user
+// @desc    Login user (sin JWT, solo validación)
 // @route   POST /api/auth/login
 // @access  Public
 exports.login = async (req, res) => {
@@ -19,7 +11,7 @@ exports.login = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide email and password',
+        message: 'Please provide email and password'
       });
     }
 
@@ -29,7 +21,7 @@ exports.login = async (req, res) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials',
+        message: 'Invalid credentials'
       });
     }
 
@@ -39,68 +31,55 @@ exports.login = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials',
+        message: 'Invalid credentials'
       });
     }
 
-    // Create token
-    const token = generateToken(user._id);
-
-    // Set cookie - CORREGIDO para CORS
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // CAMBIO IMPORTANTE
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-    });
-
+    // Retornar usuario sin token
     res.status(200).json({
       success: true,
-      token,
       user: {
         id: user._id,
         email: user.email,
-        role: user.role,
-      },
+        role: user.role
+      }
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message
     });
   }
 };
 
-// @desc    Logout user
+// @desc    Logout user (solo respuesta exitosa)
 // @route   POST /api/auth/logout
-// @access  Private
+// @access  Public
 exports.logout = async (req, res) => {
-  res.cookie('token', 'none', {
-    expires: new Date(Date.now() + 10 * 1000),
-    httpOnly: true,
-  });
-
   res.status(200).json({
     success: true,
-    message: 'User logged out successfully',
+    message: 'User logged out successfully'
   });
 };
 
-// @desc    Get current logged in user
+// @desc    Get current logged in user (mock - siempre retorna success)
 // @route   GET /api/auth/me
-// @access  Private
+// @access  Public
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-passwordHash');
-
+    // Como no hay autenticación real, retornamos un usuario genérico
     res.status(200).json({
       success: true,
-      data: user,
+      data: {
+        email: 'user@example.com',
+        role: 'admin'
+      }
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message
     });
   }
 };
+

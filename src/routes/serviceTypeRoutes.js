@@ -7,10 +7,8 @@ const {
   updateServiceType,
   deleteServiceType
 } = require('../controllers/serviceTypeController');
-const { protect } = require('../middleware/auth');
 
-router.use(protect);
-
+// Todas las rutas son públicas (sin middleware de autenticación)
 router.route('/')
   .get(getServiceTypes)
   .post(createServiceType);
