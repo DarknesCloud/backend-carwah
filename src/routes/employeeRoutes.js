@@ -7,8 +7,10 @@ const {
   updateEmployee,
   deleteEmployee
 } = require('../controllers/employeeController');
+const { protect } = require('../middleware/auth');
 
-// Todas las rutas son públicas (sin middleware de autenticación)
+router.use(protect);
+
 router.route('/')
   .get(getEmployees)
   .post(createEmployee);

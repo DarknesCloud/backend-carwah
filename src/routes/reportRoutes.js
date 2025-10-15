@@ -5,8 +5,10 @@ const {
   getVehicleReport,
   getDashboardStats
 } = require('../controllers/reportController');
+const { protect } = require('../middleware/auth');
 
-// Todas las rutas son públicas (sin middleware de autenticación)
+router.use(protect);
+
 router.get('/employee', getEmployeeReport);
 router.get('/vehicles', getVehicleReport);
 router.get('/dashboard', getDashboardStats);

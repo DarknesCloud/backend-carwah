@@ -7,8 +7,10 @@ const {
   updateVehicle,
   deleteVehicle
 } = require('../controllers/vehicleController');
+const { protect } = require('../middleware/auth');
 
-// Todas las rutas son públicas (sin middleware de autenticación)
+router.use(protect);
+
 router.route('/')
   .get(getVehicles)
   .post(createVehicle);

@@ -1,6 +1,14 @@
 const User = require('../models/User');
+const jwt = require('jsonwebtoken');
 
-// @desc    Login user (sin JWT, solo validación)
+// Generate JWT Token
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
+    expiresIn: '30d'
+  });
+};
+
+// @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
 exports.login = async (req, res) => {
@@ -35,9 +43,20 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Retornar usuario sin token
+    // Create token
+    const token = generateToken(user._id);
+
+    // Set cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    });
+
     res.status(200).json({
       success: true,
+      token,
       user: {
         id: user._id,
         email: user.email,
@@ -52,28 +71,31 @@ exports.login = async (req, res) => {
   }
 };
 
-// @desc    Logout user (solo respuesta exitosa)
+// @desc    Logout user
 // @route   POST /api/auth/logout
-// @access  Public
+// @access  Private
 exports.logout = async (req, res) => {
+  res.cookie('token', 'none', {
+    expires: new Date(Date.now() + 10 * 1000),
+    httpOnly: true
+  });
+
   res.status(200).json({
     success: true,
     message: 'User logged out successfully'
   });
 };
 
-// @desc    Get current logged in user (mock - siempre retorna success)
+// @desc    Get current logged in user
 // @route   GET /api/auth/me
-// @access  Public
+// @access  Private
 exports.getMe = async (req, res) => {
   try {
-    // Como no hay autenticación real, retornamos un usuario genérico
+    const user = await User.findById(req.user.id).select('-passwordHash');
+
     res.status(200).json({
       success: true,
-      data: {
-        email: 'user@example.com',
-        role: 'admin'
-      }
+      data: user
     });
   } catch (error) {
     res.status(500).json({
