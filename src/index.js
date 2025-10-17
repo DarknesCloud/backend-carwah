@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const connectDB = require('./config/database');
 
 // Import routes
@@ -18,10 +19,19 @@ connectDB();
 // Initialize express app
 const app = express();
 
-// Middleware - CORS abierto (sin autenticación)
+// ===== MIDDLEWARES =====
+
+// Parse JSON and URL-encoded data
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Parse cookies (⚡ NECESARIO para req.cookies.token)
+app.use(cookieParser());
+
+// CORS configuration
 const allowedOrigins = [
-  'http://localhost:3000', // para desarrollo local
-  'https://sweepstouch-front.vercel.app', // (ajusta este dominio al de tu frontend en producción)
+  'http://localhost:3000', // local development
+  'https://sweepstouch-front.vercel.app', // production frontend
 ];
 
 app.use(
@@ -39,10 +49,7 @@ app.use(
   })
 );
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Routes (todas públicas)
+// ===== ROUTES =====
 app.use('/api/auth', authRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/vehicle-types', vehicleTypeRoutes);
@@ -59,9 +66,11 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Error handler middleware
+// ===== ERROR HANDLING =====
+
+// Global error handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('❌ ERROR:', err.stack);
   res.status(err.statusCode || 500).json({
     success: false,
     message: err.message || 'Server Error',
@@ -76,11 +85,13 @@ app.use((req, res) => {
   });
 });
 
-// Start server
+// ===== START SERVER =====
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-  console.log('⚠️  WARNING: Authentication disabled - All routes are public');
+  console.log(
+    `✅ Server running in ${process.env.NODE_ENV} mode on port ${PORT}`
+  );
+  console.log('⚠️ WARNING: Authentication disabled - All routes are public');
 });
 
 module.exports = app;
