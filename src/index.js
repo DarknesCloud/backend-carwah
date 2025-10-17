@@ -25,25 +25,19 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Parse cookies (⚡ NECESARIO para req.cookies.token)
+// Parse cookies
 app.use(cookieParser());
 
 // CORS configuration
 const allowedOrigins = [
-  'http://localhost:3000', // local development
-  'https://sweepstouch-front.vercel.app', // production frontend
+  'http://localhost:3000',
+  'https://sweepstouch-front.vercel.app', // Ajusta con tu dominio real de frontend
 ];
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    credentials: true,
+    origin: allowedOrigins,
+    credentials: true, // Permite envío de cookies o cabeceras de auth
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
@@ -62,15 +56,13 @@ app.use('/api/payments', paymentRoutes);
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'Server is running - No authentication required',
+    message: '✅ Server is running and healthy',
   });
 });
 
 // ===== ERROR HANDLING =====
-
-// Global error handler
 app.use((err, req, res, next) => {
-  console.error('❌ ERROR:', err.stack);
+  console.error('❌ Global Error Handler:', err.stack);
   res.status(err.statusCode || 500).json({
     success: false,
     message: err.message || 'Server Error',
@@ -89,9 +81,9 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(
-    `✅ Server running in ${process.env.NODE_ENV} mode on port ${PORT}`
+    `🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`
   );
-  console.log('⚠️ WARNING: Authentication disabled - All routes are public');
+  console.log('✅ MongoDB connected and API ready');
 });
 
 module.exports = app;
