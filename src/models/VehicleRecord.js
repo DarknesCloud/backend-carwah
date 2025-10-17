@@ -24,11 +24,19 @@ const vehicleRecordSchema = new mongoose.Schema({
     ref: 'VehicleType',
     required: [true, 'Vehicle type is required']
   },
-  serviceType: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'ServiceType',
-    required: [true, 'Service type is required']
-  },
+  // MODIFICADO: Ahora es un array de servicios
+  services: [{
+    serviceType: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ServiceType',
+      required: true
+    },
+    price: {
+      type: Number,
+      required: true,
+      min: 0
+    }
+  }],
   employee: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Employee',
@@ -38,16 +46,30 @@ const vehicleRecordSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
-  price: {
+  // MODIFICADO: Precio total calculado de todos los servicios
+  totalPrice: {
     type: Number,
-    required: [true, 'Price is required'],
+    required: [true, 'Total price is required'],
     min: [0, 'Price cannot be negative']
+  },
+  // NUEVO: Estado de pago
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'paid'],
+    default: 'pending'
+  },
+  // NUEVO: Fecha de pago
+  paidAt: {
+    type: Date
   },
   createdAt: {
     type: Date,
     default: Date.now
   }
 });
+
+// Índice para búsquedas rápidas por estado de pago
+vehicleRecordSchema.index({ paymentStatus: 1, createdAt: -1 });
 
 module.exports = mongoose.model('VehicleRecord', vehicleRecordSchema);
 

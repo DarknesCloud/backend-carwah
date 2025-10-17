@@ -5,12 +5,11 @@ const {
   getVehicle,
   createVehicle,
   updateVehicle,
-  deleteVehicle
+  deleteVehicle,
+  markAsPaid
 } = require('../controllers/vehicleController');
-const { protect } = require('../middleware/auth');
 
-router.use(protect);
-
+// Rutas públicas
 router.route('/')
   .get(getVehicles)
   .post(createVehicle);
@@ -19,6 +18,9 @@ router.route('/:id')
   .get(getVehicle)
   .put(updateVehicle)
   .delete(deleteVehicle);
+
+// Ruta para marcar como pagado
+router.patch('/:id/pay', markAsPaid);
 
 module.exports = router;
 

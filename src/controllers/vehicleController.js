@@ -2,10 +2,10 @@ const VehicleRecord = require('../models/VehicleRecord');
 
 // @desc    Get all vehicle records
 // @route   GET /api/vehicles
-// @access  Private
+// @access  Public
 exports.getVehicles = async (req, res) => {
   try {
-    const { startDate, endDate, employeeId, vehicleTypeId } = req.query;
+    const { startDate, endDate, employeeId, vehicleTypeId, paymentStatus } = req.query;
     
     let query = {};
 
@@ -32,9 +32,14 @@ exports.getVehicles = async (req, res) => {
       query.vehicleType = vehicleTypeId;
     }
 
+    // Filter by payment status
+    if (paymentStatus) {
+      query.paymentStatus = paymentStatus;
+    }
+
     const vehicles = await VehicleRecord.find(query)
       .populate('vehicleType', 'name')
-      .populate('serviceType', 'name price')
+      .populate('services.serviceType', 'name price')
       .populate('employee', 'name email')
       .sort({ entryTime: -1 });
 
@@ -53,12 +58,12 @@ exports.getVehicles = async (req, res) => {
 
 // @desc    Get single vehicle record
 // @route   GET /api/vehicles/:id
-// @access  Private
+// @access  Public
 exports.getVehicle = async (req, res) => {
   try {
     const vehicle = await VehicleRecord.findById(req.params.id)
       .populate('vehicleType', 'name description')
-      .populate('serviceType', 'name description price')
+      .populate('services.serviceType', 'name description price')
       .populate('employee', 'name email phone');
 
     if (!vehicle) {
@@ -82,14 +87,14 @@ exports.getVehicle = async (req, res) => {
 
 // @desc    Create vehicle record
 // @route   POST /api/vehicles
-// @access  Private
+// @access  Public
 exports.createVehicle = async (req, res) => {
   try {
     const vehicle = await VehicleRecord.create(req.body);
 
     const populatedVehicle = await VehicleRecord.findById(vehicle._id)
       .populate('vehicleType', 'name')
-      .populate('serviceType', 'name price')
+      .populate('services.serviceType', 'name price')
       .populate('employee', 'name email');
 
     res.status(201).json({
@@ -106,7 +111,7 @@ exports.createVehicle = async (req, res) => {
 
 // @desc    Update vehicle record
 // @route   PUT /api/vehicles/:id
-// @access  Private
+// @access  Public
 exports.updateVehicle = async (req, res) => {
   try {
     const vehicle = await VehicleRecord.findByIdAndUpdate(
@@ -118,7 +123,46 @@ exports.updateVehicle = async (req, res) => {
       }
     )
       .populate('vehicleType', 'name')
-      .populate('serviceType', 'name price')
+      .populate('services.serviceType', 'name price')
+      .populate('employee', 'name email');
+
+    if (!vehicle) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicle record not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: vehicle
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// @desc    Mark vehicle as paid
+// @route   PATCH /api/vehicles/:id/pay
+// @access  Public
+exports.markAsPaid = async (req, res) => {
+  try {
+    const vehicle = await VehicleRecord.findByIdAndUpdate(
+      req.params.id,
+      {
+        paymentStatus: 'paid',
+        paidAt: new Date()
+      },
+      {
+        new: true,
+        runValidators: true
+      }
+    )
+      .populate('vehicleType', 'name')
+      .populate('services.serviceType', 'name price')
       .populate('employee', 'name email');
 
     if (!vehicle) {
@@ -142,7 +186,7 @@ exports.updateVehicle = async (req, res) => {
 
 // @desc    Delete vehicle record
 // @route   DELETE /api/vehicles/:id
-// @access  Private
+// @access  Public
 exports.deleteVehicle = async (req, res) => {
   try {
     const vehicle = await VehicleRecord.findByIdAndDelete(req.params.id);

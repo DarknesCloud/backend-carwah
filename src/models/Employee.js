@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const employeeSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [true, 'Employee name is required'],
+    required: [true, 'Name is required'],
     trim: true
   },
   email: {
@@ -11,8 +11,7 @@ const employeeSchema = new mongoose.Schema({
     required: [true, 'Email is required'],
     unique: true,
     lowercase: true,
-    trim: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please provide a valid email']
+    trim: true
   },
   phone: {
     type: String,
@@ -21,6 +20,13 @@ const employeeSchema = new mongoose.Schema({
   active: {
     type: Boolean,
     default: true
+  },
+  // NUEVO: Porcentaje de comisión por lavado (0-100)
+  commissionPercentage: {
+    type: Number,
+    default: 50,
+    min: 0,
+    max: 100
   },
   createdAt: {
     type: Date,
