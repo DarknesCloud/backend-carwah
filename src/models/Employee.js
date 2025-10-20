@@ -21,12 +21,11 @@ const employeeSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  // NUEVO: Porcentaje de comisión por lavado (0-100)
-  commissionPercentage: {
+  // NUEVO: Pago fijo por servicio
+  paymentPerService: {
     type: Number,
     default: 50,
-    min: 0,
-    max: 100
+    min: 0
   },
   createdAt: {
     type: Date,

@@ -27,7 +27,7 @@ exports.getPaymentSummary = async (req, res) => {
 
     // Obtener todos los vehículos pagados del período
     const vehicles = await VehicleRecord.find(dateQuery)
-      .populate('employee', 'name email commissionPercentage')
+      .populate('employee', 'name email paymentPerService')
       .populate('services.serviceType', 'name price');
 
     // Calcular totales por empleado
@@ -36,8 +36,8 @@ exports.getPaymentSummary = async (req, res) => {
 
     vehicles.forEach(vehicle => {
       const employeeId = vehicle.employee._id.toString();
-      const commission = vehicle.employee.commissionPercentage || 50;
-      const employeeEarning = (vehicle.totalPrice * commission) / 100;
+      const paymentPerSrv = vehicle.employee.paymentPerService || 50;
+      const employeeEarning = (vehicle.services.length || 1) * paymentPerSrv;
 
       if (!employeePayments[employeeId]) {
         employeePayments[employeeId] = {
@@ -45,7 +45,7 @@ exports.getPaymentSummary = async (req, res) => {
             id: vehicle.employee._id,
             name: vehicle.employee.name,
             email: vehicle.employee.email,
-            commissionPercentage: commission
+            paymentPerService: paymentPerSrv
           },
           totalWashes: 0,
           totalRevenue: 0,
@@ -120,7 +120,7 @@ exports.getDailyPaymentSummary = async (req, res) => {
       },
       paymentStatus: 'paid'
     })
-      .populate('employee', 'name email commissionPercentage')
+      .populate('employee', 'name email paymentPerService')
       .populate('services.serviceType', 'name price');
 
     // Calcular totales por empleado
@@ -129,8 +129,8 @@ exports.getDailyPaymentSummary = async (req, res) => {
 
     vehicles.forEach(vehicle => {
       const employeeId = vehicle.employee._id.toString();
-      const commission = vehicle.employee.commissionPercentage || 50;
-      const employeeEarning = (vehicle.totalPrice * commission) / 100;
+      const paymentPerSrv = vehicle.employee.paymentPerService || 50;
+      const employeeEarning = (vehicle.services.length || 1) * paymentPerSrv;
 
       if (!employeePayments[employeeId]) {
         employeePayments[employeeId] = {
@@ -138,7 +138,7 @@ exports.getDailyPaymentSummary = async (req, res) => {
             id: vehicle.employee._id,
             name: vehicle.employee.name,
             email: vehicle.employee.email,
-            commissionPercentage: commission
+            paymentPerService: paymentPerSrv
           },
           totalWashes: 0,
           totalRevenue: 0,
@@ -203,9 +203,9 @@ exports.createPayment = async (req, res) => {
       paymentStatus: 'paid'
     });
 
-    const commission = employee.commissionPercentage || 50;
+    const paymentPerSrv = employee.paymentPerService || 50;
     const totalAmount = vehicles.reduce((sum, vehicle) => {
-      return sum + (vehicle.totalPrice * commission) / 100;
+      return sum + ((vehicle.services.length || 1) * paymentPerSrv);
     }, 0);
 
     // Crear registro de pago
@@ -221,7 +221,7 @@ exports.createPayment = async (req, res) => {
     });
 
     const populatedPayment = await Payment.findById(payment._id)
-      .populate('employee', 'name email commissionPercentage')
+      .populate('employee', 'name email paymentPerService')
       .populate('vehicleRecords');
 
     res.status(201).json({
@@ -262,7 +262,7 @@ exports.getPayments = async (req, res) => {
     }
 
     const payments = await Payment.find(query)
-      .populate('employee', 'name email commissionPercentage')
+      .populate('employee', 'name email paymentPerService')
       .sort({ paidAt: -1 });
 
     res.status(200).json({
