@@ -12,6 +12,7 @@ const serviceTypeRoutes = require('./routes/serviceTypeRoutes');
 const employeeRoutes = require('./routes/employeeRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const adjustmentRoutes = require('./routes/adjustmentRoutes');
 
 // Connect to database
 connectDB();
@@ -51,6 +52,7 @@ app.use('/api/service-types', serviceTypeRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/adjustments', adjustmentRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

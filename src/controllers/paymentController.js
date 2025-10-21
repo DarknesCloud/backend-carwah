@@ -1,6 +1,7 @@
 const Payment = require('../models/Payment');
 const VehicleRecord = require('../models/VehicleRecord');
 const Employee = require('../models/Employee');
+const PaymentAdjustment = require('../models/PaymentAdjustment');
 
 // @desc    Get payment summary for a specific date range
 // @route   GET /api/payments/summary
@@ -68,9 +69,75 @@ exports.getPaymentSummary = async (req, res) => {
       totalRevenue += vehicle.totalPrice;
     });
 
-    const employeePaymentsArray = Object.values(employeePayments);
+    // Obtener ajustes del período
+    let adjustmentQuery = {};
+    if (startDate || endDate) {
+      adjustmentQuery.date = {};
+      if (startDate) {
+        adjustmentQuery.date.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        adjustmentQuery.date.$lte = end;
+      }
+    }
+
+    const adjustments = await PaymentAdjustment.find(adjustmentQuery)
+      .populate('employee', 'name email');
+
+    // Aplicar ajustes a los empleados
+    adjustments.forEach(adj => {
+      const employeeId = adj.employee._id.toString();
+      if (employeePayments[employeeId]) {
+        employeePayments[employeeId].adjustments = employeePayments[employeeId].adjustments || [];
+        employeePayments[employeeId].adjustments.push({
+          id: adj._id,
+          amount: adj.amount,
+          type: adj.type,
+          description: adj.description,
+          date: adj.date
+        });
+        employeePayments[employeeId].totalAdjustments = (employeePayments[employeeId].totalAdjustments || 0) + adj.amount;
+      } else {
+        // Empleado con ajuste pero sin servicios en el período
+        employeePayments[employeeId] = {
+          employee: {
+            id: adj.employee._id,
+            name: adj.employee.name,
+            email: adj.employee.email,
+            paymentPerService: 50
+          },
+          totalWashes: 0,
+          totalRevenue: 0,
+          totalEarnings: 0,
+          adjustments: [{
+            id: adj._id,
+            amount: adj.amount,
+            type: adj.type,
+            description: adj.description,
+            date: adj.date
+          }],
+          totalAdjustments: adj.amount,
+          vehicles: []
+        };
+      }
+    });
+
+    // Calcular total final con ajustes
+    const employeePaymentsArray = Object.values(employeePayments).map(emp => ({
+      ...emp,
+      totalAdjustments: emp.totalAdjustments || 0,
+      finalTotal: (emp.totalEarnings || 0) + (emp.totalAdjustments || 0)
+    }));
+
     const totalEmployeePayments = employeePaymentsArray.reduce(
       (sum, emp) => sum + emp.totalEarnings, 
+      0
+    );
+
+    const totalAdjustments = employeePaymentsArray.reduce(
+      (sum, emp) => sum + (emp.totalAdjustments || 0),
       0
     );
 
@@ -84,7 +151,9 @@ exports.getPaymentSummary = async (req, res) => {
         summary: {
           totalRevenue,
           totalEmployeePayments,
-          remainingCash: totalRevenue - totalEmployeePayments,
+          totalAdjustments,
+          finalTotal: totalEmployeePayments + totalAdjustments,
+          remainingCash: totalRevenue - (totalEmployeePayments + totalAdjustments),
           totalWashes: vehicles.length
         },
         employeePayments: employeePaymentsArray
@@ -153,9 +222,65 @@ exports.getDailyPaymentSummary = async (req, res) => {
       totalRevenue += vehicle.totalPrice;
     });
 
-    const employeePaymentsArray = Object.values(employeePayments);
+    // Obtener ajustes del día
+    const adjustments = await PaymentAdjustment.find({
+      date: {
+        $gte: startOfDay,
+        $lte: endOfDay
+      }
+    }).populate('employee', 'name email');
+
+    // Aplicar ajustes a los empleados
+    adjustments.forEach(adj => {
+      const employeeId = adj.employee._id.toString();
+      if (employeePayments[employeeId]) {
+        employeePayments[employeeId].adjustments = employeePayments[employeeId].adjustments || [];
+        employeePayments[employeeId].adjustments.push({
+          id: adj._id,
+          amount: adj.amount,
+          type: adj.type,
+          description: adj.description,
+          date: adj.date
+        });
+        employeePayments[employeeId].totalAdjustments = (employeePayments[employeeId].totalAdjustments || 0) + adj.amount;
+      } else {
+        // Empleado con ajuste pero sin servicios en el día
+        employeePayments[employeeId] = {
+          employee: {
+            id: adj.employee._id,
+            name: adj.employee.name,
+            email: adj.employee.email,
+            paymentPerService: 50
+          },
+          totalWashes: 0,
+          totalRevenue: 0,
+          totalEarnings: 0,
+          adjustments: [{
+            id: adj._id,
+            amount: adj.amount,
+            type: adj.type,
+            description: adj.description,
+            date: adj.date
+          }],
+          totalAdjustments: adj.amount
+        };
+      }
+    });
+
+    // Calcular total final con ajustes
+    const employeePaymentsArray = Object.values(employeePayments).map(emp => ({
+      ...emp,
+      totalAdjustments: emp.totalAdjustments || 0,
+      finalTotal: (emp.totalEarnings || 0) + (emp.totalAdjustments || 0)
+    }));
+
     const totalEmployeePayments = employeePaymentsArray.reduce(
       (sum, emp) => sum + emp.totalEarnings, 
+      0
+    );
+
+    const totalAdjustments = employeePaymentsArray.reduce(
+      (sum, emp) => sum + (emp.totalAdjustments || 0),
       0
     );
 
@@ -166,7 +291,9 @@ exports.getDailyPaymentSummary = async (req, res) => {
         summary: {
           totalRevenue,
           totalEmployeePayments,
-          remainingCash: totalRevenue - totalEmployeePayments,
+          totalAdjustments,
+          finalTotal: totalEmployeePayments + totalAdjustments,
+          remainingCash: totalRevenue - (totalEmployeePayments + totalAdjustments),
           totalWashes: vehicles.length
         },
         employeePayments: employeePaymentsArray
