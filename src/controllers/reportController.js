@@ -35,8 +35,8 @@ exports.getEmployeeReport = async (req, res) => {
         $group: {
           _id: '$employee',
           totalWashes: { $sum: 1 },
-          totalRevenue: { $sum: '$price' },
-          averagePrice: { $avg: '$price' }
+          totalRevenue: { $sum: '$totalPrice' },
+          averagePrice: { $avg: '$totalPrice' }
         }
       },
       {
@@ -117,17 +117,25 @@ exports.getVehicleReport = async (req, res) => {
 
     const vehicles = await VehicleRecord.find(query)
       .populate('vehicleType', 'name')
-      .populate('serviceType', 'name price')
+      .populate('services.serviceType', 'name price')
       .populate('employee', 'name email')
       .sort({ entryTime: -1 });
 
-    // Calculate summary statistics
+    // Calculate summary statistics with payment method breakdown
     const summary = {
       totalRecords: vehicles.length,
-      totalRevenue: vehicles.reduce((sum, v) => sum + v.price, 0),
+      totalRevenue: vehicles.reduce((sum, v) => sum + v.totalPrice, 0),
       averagePrice: vehicles.length > 0 
-        ? vehicles.reduce((sum, v) => sum + v.price, 0) / vehicles.length 
-        : 0
+        ? vehicles.reduce((sum, v) => sum + v.totalPrice, 0) / vehicles.length 
+        : 0,
+      efectivo: {
+        count: vehicles.filter(v => v.paymentMethod === 'efectivo').length,
+        revenue: vehicles.filter(v => v.paymentMethod === 'efectivo').reduce((sum, v) => sum + v.totalPrice, 0)
+      },
+      transferencia: {
+        count: vehicles.filter(v => v.paymentMethod === 'transferencia').length,
+        revenue: vehicles.filter(v => v.paymentMethod === 'transferencia').reduce((sum, v) => sum + v.totalPrice, 0)
+      }
     };
 
     res.status(200).json({
@@ -135,7 +143,15 @@ exports.getVehicleReport = async (req, res) => {
       summary: {
         totalRecords: summary.totalRecords,
         totalRevenue: Math.round(summary.totalRevenue * 100) / 100,
-        averagePrice: Math.round(summary.averagePrice * 100) / 100
+        averagePrice: Math.round(summary.averagePrice * 100) / 100,
+        efectivo: {
+          count: summary.efectivo.count,
+          revenue: Math.round(summary.efectivo.revenue * 100) / 100
+        },
+        transferencia: {
+          count: summary.transferencia.count,
+          revenue: Math.round(summary.transferencia.revenue * 100) / 100
+        }
       },
       data: vehicles
     });
@@ -152,14 +168,23 @@ exports.getVehicleReport = async (req, res) => {
 // @access  Private
 exports.getDashboardStats = async (req, res) => {
   try {
-    const today = new Date();
+    // Honduras timezone (CST -6)
+    const now = new Date();
+    const hondurasOffset = -6 * 60; // -6 horas en minutos
+    const localOffset = now.getTimezoneOffset();
+    const hondurasTime = new Date(now.getTime() + (localOffset + hondurasOffset) * 60000);
+    
+    const today = new Date(hondurasTime);
     today.setHours(0, 0, 0, 0);
 
-    const thisWeek = new Date();
-    thisWeek.setDate(thisWeek.getDate() - 7);
+    // Calcular inicio de semana (lunes)
+    const thisWeek = new Date(hondurasTime);
+    const dayOfWeek = thisWeek.getDay(); // 0 = domingo, 1 = lunes, ...
+    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Si es domingo, retroceder 6 días
+    thisWeek.setDate(thisWeek.getDate() - daysToMonday);
     thisWeek.setHours(0, 0, 0, 0);
 
-    const thisMonth = new Date();
+    const thisMonth = new Date(hondurasTime);
     thisMonth.setDate(1);
     thisMonth.setHours(0, 0, 0, 0);
 
@@ -170,7 +195,7 @@ exports.getDashboardStats = async (req, res) => {
         $group: {
           _id: null,
           count: { $sum: 1 },
-          revenue: { $sum: '$price' }
+          revenue: { $sum: '$totalPrice' }
         }
       }
     ]);
@@ -182,7 +207,7 @@ exports.getDashboardStats = async (req, res) => {
         $group: {
           _id: null,
           count: { $sum: 1 },
-          revenue: { $sum: '$price' }
+          revenue: { $sum: '$totalPrice' }
         }
       }
     ]);
@@ -194,7 +219,7 @@ exports.getDashboardStats = async (req, res) => {
         $group: {
           _id: null,
           count: { $sum: 1 },
-          revenue: { $sum: '$price' }
+          revenue: { $sum: '$totalPrice' }
         }
       }
     ]);

@@ -62,6 +62,13 @@ const vehicleRecordSchema = new mongoose.Schema({
   paidAt: {
     type: Date
   },
+  // NUEVO: Método de pago
+  paymentMethod: {
+    type: String,
+    enum: ['efectivo', 'transferencia'],
+    required: [true, 'Payment method is required'],
+    default: 'efectivo'
+  },
   createdAt: {
     type: Date,
     default: Date.now
