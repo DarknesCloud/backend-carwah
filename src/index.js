@@ -32,7 +32,7 @@ app.use(cookieParser());
 // CORS configuration
 const allowedOrigins = [
   'http://localhost:3000',
-  'frontend-carwash-4yh8.vercel.app', // Ajusta con tu dominio real de frontend
+  'https://frontend-carwash-4yh8.vercel.app', // Ajusta con tu dominio real de frontend
 ];
 
 app.use(
